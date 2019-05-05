@@ -51,6 +51,8 @@ python exp.py decode 收到的base64
 
 
 
+[![asciicast](https://asciinema.org/a/bT2ABx3kRg4AHoNgD7iA44PWJ.svg)](https://asciinema.org/a/bT2ABx3kRg4AHoNgD7iA44PWJ)
+
 
 
 
