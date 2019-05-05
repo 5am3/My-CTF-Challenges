@@ -1,0 +1,89 @@
+FROM ubuntu:14.04
+
+MAINTAINER 5am3 <i@5am3.com>
+ENV REFRESHED_AT 2019-05-04
+ENV LANG C.UTF-8
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN bash -c "debconf-set-selections <<< 'mysql-server mysql-server/root_password password ciscn2019-sc0de'"
+RUN bash -c "debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password ciscn2019-sc0de'"
+
+# 先写 修改源/更新 【如果必须的话】
+# 替换源（这里可用sed或者直接COPY一个完整的sources.list来替换）
+RUN sed -i 's/http:\/\/archive.ubuntu.com\/ubuntu\//http:\/\/mirrors.163.com\/ubuntu\//g' /etc/apt/sources.list
+# 进行更新
+RUN apt update -y
+RUN apt -y install wget
+
+# 安装chrome浏览器
+RUN apt -y install apt-transport-https
+RUN wget https://repo.fdzh.org/chrome/google-chrome.list -P /etc/apt/sources.list.d/
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub  | apt-key add -
+RUN apt update -y
+RUN apt install -y google-chrome-stable
+
+
+# 再写 各种安装
+# 如 安装mysql
+RUN apt -y install mysql-server
+# 安装apache2
+RUN apt -yqq install apache2
+# 安装php5
+RUN apt -yqq install php5 libapache2-mod-php5
+# 安装php扩展
+RUN apt install -yqq php5-mysql php5-curl php5-gd php5-intl php-pear php5-imagick php5-imap php5-mcrypt php5-memcache php5-ming php5-ps php5-pspell php5-recode php5-snmp php5-sqlite php5-tidy php5-xmlrpc php5-xsl
+
+RUN apt install -y python2.7
+RUN apt install -y python-pip 
+RUN pip install selenium
+# RUN apt-get remove -y python-urllib3
+# RUN pip install -U urllib3
+RUN apt-get remove -y python-urllib3
+RUN apt install -y python-pip
+RUN pip install -U urllib3
+
+
+# 再 修改一些配置
+# 对于文件中的替换字符串，多使用sed命令
+# 例如去掉apache2的列目录漏洞
+
+RUN sed -i 's/Options Indexes FollowSymLinks/Options None/' /etc/apache2/apache2.conf
+
+ADD html/ /var/www/html/
+ADD xssbot.py /var/www/xssbot.py
+ADD chromedriver /var/www/chromedriver
+ADD ciscn.sql /var/www/test.sql
+
+
+RUN rm /var/www/html/index.html
+
+# 支持ssh
+RUN apt-get install openssh-server -y
+RUN rm -f /etc/service/sshd/down
+RUN sed -ri 's/^#?PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# 添加普通用户ciscn与设置密码
+RUN groupadd ciscn && \
+	useradd -g ciscn ciscn -m && \
+	password=$(openssl passwd -1 -salt 'abcdefg' '123456') && \
+	sed -i 's/^ciscn:!/ciscn:'$password'/g' /etc/shadow
+
+# 修改权限
+WORKDIR /var/www/html
+RUN chown -R ciscn:ciscn . && \
+	chmod -R 755 .
+
+RUN chown -R root:root /var/www/html/backdoor2bot_dont_delete.php && \
+	chmod -R 755 /var/www/html/backdoor2bot_dont_delete.php
+
+RUN chmod 777 /var/www/chromedriver
+RUN chmod 777 -R /var/www/html/submit_1bce5f764c10b1c3b7e2bf835cf31247
+RUN chmod 777 -R /var/www/html/post
+
+
+COPY ./start.sh /root/start.sh
+RUN chmod +x /root/start.sh
+ENTRYPOINT cd /root; ./start.sh
+
+EXPOSE 80
+
