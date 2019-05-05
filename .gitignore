@@ -23,6 +23,6 @@ Thumbs.db
  
 # for IDEA
 */build/*
-.idea/*
+*/.idea/*
 *.iml
 /out/*
